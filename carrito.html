@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carrito de Compras</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #492f08;
+        }
+
+        .header {
+            background-color: #57410636;
+            width: 100%;
+            padding: 20px;
+            text-align: center;
+            color: rgba(241, 210, 141, 0.952);
+        }
+
+        .carrito-container, .ventas-container, .factura-container {
+            margin-top: 30px;
+            background-color: rgba(255, 182, 87, 0.808);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #72665b;
+            color: white;
+        }
+
+        .total-container, .paginacion-container {
+            text-align: right;
+            margin-top: 20px;
+        }
+
+        .factura-container {
+            margin-top: 50px;
+        }
+
+        .editable {
+            display: none;
+        }
+
+        .paginacion-container button {
+            margin: 0 5px;
+        }
+
+        @media print {
+            .no-print {
+                display: none;
+            }
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+    <div class="header">
+        <h1>Carrito de Compras</h1>
+    </div>
+
+    <!-- Tabla de productos en el carrito -->
+    <div class="carrito-container">
+        <table id="carrito-table">
+            <thead>
+                <tr>
+                    <th>Nombre del Producto</th>
+                    <th>Cantidad</th>
+                    <th>Precio</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Los productos se insertarán aquí mediante JavaScript -->
+            </tbody>
+        </table>
+        <div class="total-container">
+            <h3>Total: $<span id="total"></span></h3>
+        </div>
+        <button class="no-print" onclick="generarFactura()">Generar Factura</button>
+    </div>
+
+    <!-- Resumen de ventas -->
+    <div class="ventas-container">
+        <h2>Resumen de Ventas</h2>
+        <div id="ventas-container">
+            <table id="ventas-table">
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Ventas</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Los datos de ventas se insertarán aquí mediante JavaScript -->
+                </tbody>
+            </table>
+        </div>
+        <div class="paginacion-container">
+            <button class="no-print" onclick="anteriorPagina()">Anterior</button>
+            <button class="no-print" onclick="siguientePagina()">Siguiente</button>
+        </div>
+        <button class="no-print" onclick="capturarResumen()">Capturar Resumen</button>
+    </div>
+
+    <!-- Factura -->
+    <div class="factura-container no-print" id="factura-container">
+        <h2>Factura</h2>
+        <div id="factura-content"></div>
+        <button onclick="printFactura()">Imprimir Factura</button>
+    </div>
+
+    <script>
+        // Cargar el carrito desde el Local Storage
+        let carrito = JSON.parse(localStorage.getItem('carrito')) || [];
+
+        // Seleccionar los elementos donde se mostrará la información
+        let carritoTableBody = document.querySelector('#carrito-table tbody');
+        let totalElement = document.getElementById('total');
+        let ventasTableBody = document.querySelector('#ventas-table tbody');
+        let facturaContent = document.getElementById('factura-content');
+        let ventasContainer = document.getElementById('ventas-container');
+
+        // Variables de paginación
+        let paginaActual = 1;
+        const facturasPorPagina = 10;
+
+        // Función para actualizar la tabla del carrito
+        function actualizarCarrito() {
+            carritoTableBody.innerHTML = '';
+            let total = 0;
+
+            carrito.forEach((producto, index) => {
+                let row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${producto.nombre}</td>
+                    <td>
+                        <span class="cantidad">${producto.cantidad}</span>
+                        <input type="number" class="editable" value="${producto.cantidad}" id="cantidad-${index}">
+                    </td>
+                    <td>
+                        $<span class="precio">${(producto.precio).toFixed(2)}</span>
+                        <input type="number" class="editable" step="0.01" value="${producto.precio}" id="precio-${index}">
+                    </td>
+                    <td>
+                        <button onclick="habilitarEdicion(${index})">Editar</button>
+                        <button class="editable" onclick="guardarCambios(${index})">Guardar</button>
+                        <button onclick="eliminarProducto(${index})">Eliminar</button>
+                    </td>
+                `;
+                carritoTableBody.appendChild(row);
+                total += producto.precio * producto.cantidad;
+            });
+
+            totalElement.textContent = total.toFixed(2);
+            actualizarVentas();
+        }
+
+        // Función para habilitar la edición de cantidad y precio
+        function habilitarEdicion(index) {
+            document.querySelector(`#cantidad-${index}`).classList.toggle('editable');
+            document.querySelector(`#precio-${index}`).classList.toggle('editable');
+            document.querySelectorAll(`#carrito-table tbody tr td button`).forEach(btn => btn.style.display = 'none');
+            document.querySelector(`#carrito-table tbody tr:nth-child(${index + 1}) td button:nth-child(2)`).style.display = 'inline-block'; // Mostrar botón de guardar
+        }
+
+        // Función para guardar los cambios realizados
+        function guardarCambios(index) {
+            let nuevaCantidad = parseInt(document.getElementById(`cantidad-${index}`).value);
+            let nuevoPrecio = parseFloat(document.getElementById(`precio-${index}`).value);
+            
+            carrito[index].cantidad = nuevaCantidad;
+            carrito[index].precio = nuevoPrecio;
+
+            localStorage.setItem('carrito', JSON.stringify(carrito));
+            actualizarCarrito();
+        }
+
+        // Función para eliminar un producto del carrito
+        function eliminarProducto(index) {
+            carrito.splice(index, 1);
+            localStorage.setItem('carrito', JSON.stringify(carrito));
+            actualizarCarrito();
+        }
+
+        // Función para actualizar la tabla de ventas
+        function actualizarVentas() {
+            let ventas = {};
+            carrito.forEach(producto => {
+                if (!ventas[producto.nombre]) {
+                    ventas[producto.nombre] = 0;
+                }
+                ventas[producto.nombre] += producto.cantidad * producto.precio;
+            });
+
+            ventasTableBody.innerHTML = '';
+            let ventasArray = Object.entries(ventas);
+            let inicio = (paginaActual - 1) * facturasPorPagina;
+            let fin = Math.min(inicio + facturasPorPagina, ventasArray.length);
+
+            for (let i = inicio; i < fin; i++) {
+                let [producto, ventasTotales] = ventasArray[i];
+                let row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${producto}</td>
+                    <td>$${ventasTotales.toFixed(2)}</td>
+                `;
+                ventasTableBody.appendChild(row);
+            }
+        }
+
+        // Función para generar la factura
+        function generarFactura() {
+            let facturaHtml = '<h3>Factura</h3>';
+            let total = 0;
+            let contador = 0;
+            const facturasPorPagina = 10;
+            let paginas = [];
+
+            carrito.forEach((producto, index) => {
+                if (contador % facturasPorPagina === 0) {
+                    if (contador > 0) {
+                        paginas.push(facturaHtml);
+                    }
+                    facturaHtml = `<h3>Factura - Página ${Math.ceil(contador / facturasPorPagina) + 1}</h3>`;
+                }
+                facturaHtml += `
+                    <p>Producto: ${producto.nombre}<br>
+                    Cantidad: ${producto.cantidad}<br>
+                    Precio Unitario: $${producto.precio.toFixed(2)}<br>
+                    Total: $${(producto.cantidad * producto.precio).toFixed(2)}</p>
+                `;
+                total += producto.cantidad * producto.precio;
+                contador++;
+            });
+
+            if (contador > 0) {
+                paginas.push(facturaHtml);
+            }
+
+            // Mostrar la primera página de la factura
+            facturaContent.innerHTML = paginas[0];
+            document.querySelector('.factura-container').style.display = 'block';
+        }
+
+        // Función para imprimir la factura
+        function printFactura() {
+            window.print();
+        }
+
+        // Función para cambiar a la página anterior
+        function anteriorPagina() {
+            if (paginaActual > 1) {
+                paginaActual--;
+                actualizarVentas();
+            }
+        }
+
+        // Función para cambiar a la siguiente página
+        function siguientePagina() {
+            if (paginaActual * facturasPorPagina < Object.keys(carrito).length) {
+                paginaActual++;
+                actualizarVentas();
+            }
+        }
+
+        // Función para capturar el resumen de ventas como imagen
+        function capturarResumen() {
+            html2canvas(ventasContainer).then(canvas => {
+                let link = document.createElement('a');
+                link.href = canvas.toDataURL('image/png');
+                link.download = 'resumen_ventas.png';
+                link.click();
+            });
+        }
+
+        // Inicializar la página
+        actualizarCarrito();
+    </script>
+</body>
+</html>

@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tienda de Donas</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #b15724e1;
+        }
+
+        .header {
+            background-color: #ebae68a9;
+            padding: 20px;
+            text-align: center;
+            color: white;
+        }
+
+        .productos-container {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+        }
+
+        .producto {
+            background-color: rgb(223, 172, 96);
+            padding: 20px;
+            margin: 10px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 200px;
+            text-align: center;
+        }
+
+        .producto img {
+            max-width: 100%;
+            border-radius: 10px;
+        }
+
+        .producto h3 {
+            margin: 10px 0;
+        }
+
+        .producto button {
+            background-color: #FF6B6B;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .carrito-btn {
+            background-color: #553205;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            text-align: center;
+            border-radius: 5px;
+            cursor: pointer;
+            display: block;
+            margin: 20px auto;
+            text-decoration: none;
+        }
+
+        .personalizar-container {
+            margin-top: 30px;
+            background-color: rgb(255, 19, 19);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgb(254, 255, 247);
+            text-align: center;
+        }
+
+        .personalizar-container h3 {
+            margin-bottom: 20px;
+        }
+
+        .personalizar-container label {
+            display: block;
+            margin: 10px 0;
+        }
+
+        .personalizar-container select, .personalizar-container button {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 1px solid #f70000;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Tienda de Donas</h1>
+    </div>
+
+    <div class="productos-container">
+        <!-- Combos -->
+        <div class="producto">
+            <img src="combofrutal.PNG" alt="Combo Frutal">
+            <h1>Combo Frutal</h1>
+            <p>$3.00</p>
+            <h5>Nutella con fresas</h5>
+            <button onclick="agregarAlCarrito('Combo Frutal', 3.00)">Añadir al Carrito</button>
+        </div>
+        <div class="producto">
+            <img src="combotropical.PNG" alt="Combo Tropical">
+            <h1>Combo Tropical</h1>
+            <p>$3.00</p>
+            <h5>Nutella con banano</h5>
+            <button onclick="agregarAlCarrito('Combo Tropical', 3.00)">Añadir al Carrito</button>
+        </div>
+        <div class="producto">
+            <img src="combopersonalizado.PNG" alt="Combo Sorpresa">
+            <h1>Combo Sorpresa</h1>
+            <p>$3.00</p>
+            <h5>Chocolate Hershey con galleta oreo</h5>
+            <button onclick="agregarAlCarrito('Combo Sorpresa', 3.00)">Añadir al Carrito</button>
+        </div>
+        <div class="producto">
+            <h3>Combo Personalizado</h3>
+            <button onclick="mostrarPersonalizar()">Personaliza tu Dona</button>
+        </div>
+    </div>
+
+    <div class="personalizar-container" id="personalizar-container" style="display: none;">
+        <h3>Personaliza tu Dona</h3>
+        <label for="topping">Selecciona un Topping:</label>
+        <select id="topping">
+            <option value="banano">Banano - $0.35</option>
+            <option value="fresa">Fresa - $0.35</option>
+            <option value="oreo">Galleta Oreo - $0.35</option>
+            <option value="coco">Coco - $0.35</option>
+            <option value="chispas-colores">Chispas de Colores - $0.35</option>
+            <option value="chispas-chocolate">Chispas de Chocolate - $0.35</option>
+        </select>
+        <label for="jarabe">Selecciona un Jarabe:</label>
+        <select id="jarabe">
+            <option value="caramelo">Caramelo - $0.35</option>
+            <option value="leche-condensada">Leche Condensada - $0.35</option>
+            <option value="nutella">Nutella - $0.35</option>
+            <option value="chocolate-hershey">Chocolate Hershey - $0.35</option>
+        </select>
+        <button onclick="agregarPersonalizado()">Añadir al Carrito</button>
+        <button onclick="ocultarPersonalizar()">Cancelar</button>
+    </div>
+
+    <button class="carrito-btn" onclick="abrirCarrito()">Ver Carrito</button>
+
+    <script>
+        // Función para mostrar el panel de personalización
+        function mostrarPersonalizar() {
+            document.getElementById('personalizar-container').style.display = 'block';
+        }
+
+        // Función para ocultar el panel de personalización
+        function ocultarPersonalizar() {
+            document.getElementById('personalizar-container').style.display = 'none';
+        }
+
+        // Función para agregar una dona personalizada al carrito
+        function agregarPersonalizado() {
+            const topping = document.getElementById('topping').value;
+            const jarabe = document.getElementById('jarabe').value;
+            const precio = 3.00 + 0.35 + 0.35; // Precio base más dos agregados
+
+            let carrito = JSON.parse(localStorage.getItem('carrito')) || [];
+            carrito.push({
+                nombre: `Personalizada (Topping: ${topping}, Jarabe: ${jarabe})`,
+                precio: precio,
+                cantidad: 1
+            });
+            localStorage.setItem('carrito', JSON.stringify(carrito));
+            alert('Dona personalizada añadida al carrito');
+            ocultarPersonalizar();
+        }
+
+        // Función para agregar un combo al carrito
+        function agregarAlCarrito(nombre, precio) {
+            let carrito = JSON.parse(localStorage.getItem('carrito')) || [];
+            let productoExistente = carrito.find(producto => producto.nombre === nombre);
+
+            if (productoExistente) {
+                productoExistente.cantidad += 1;
+            } else {
+                carrito.push({ nombre: nombre, precio: precio, cantidad: 1 });
+            }
+
+            localStorage.setItem('carrito', JSON.stringify(carrito));
+            alert('Producto añadido al carrito');
+        }
+
+        // Función para abrir el carrito en una nueva pestaña/ventana
+        function abrirCarrito() {
+            window.open('carrito.html', '_blank');
+        }
+    </script>
+</body>
+</html>
